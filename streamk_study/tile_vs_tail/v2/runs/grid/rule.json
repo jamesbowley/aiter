@@ -1,0 +1,1 @@
+{"gate": 0.1, "K": {"1024": ["sub-tile tail", 0.5], "2048": ["sub-tile tail", 0.5], "4096": ["sub-tile tail", 0.5], "8192": ["Stream-K", 0.5625], "16384": ["Stream-K", 0.9375]}}

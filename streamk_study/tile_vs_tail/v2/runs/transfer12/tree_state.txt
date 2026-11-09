@@ -1,0 +1,14 @@
+52f3038d38682047241380ad8756f2281b626a36
+ M .gitignore
+M  aiter/ops/triton/_gluon_kernels/gfx950/gemm/basic/gemm_a16w16.py
+M  aiter/ops/triton/_gluon_kernels/gfx950/gemm/basic/gemm_a16w16_streamk.py
+D  aiter/ops/triton/_gluon_kernels/gfx950/gemm/basic/gemm_a16w16_uneven.py
+MM aiter/ops/triton/gemm/basic/gemm_a16w16.py
+ M aiter/tuned_gemm.py
+ M op_tests/triton_tests/gemm/basic/test_gemm_a16w16.py
+df4200a34da1c43647e2ad3d253646a1  aiter/ops/triton/_gluon_kernels/gfx950/gemm/basic/gemm_a16w16.py
+cc6000173c0f78c43dbbe9c9a10e0cde  aiter/ops/triton/_gluon_kernels/gfx950/gemm/basic/gemm_a16w16_streamk.py
+44d3727cbc009dac102d6c5f1519ce17  aiter/ops/triton/_gluon_kernels/gfx950/gemm/basic/gemm_a16w16_subtile.py
+a13306631d2cd70d712adb10bc890bc5  aiter/ops/triton/_gluon_kernels/gfx950/gemm/basic/gemm_a16w16_uneven.py
+1c2c98fbb2666c541d0cb4228c54b57c  aiter/ops/triton/gemm/basic/gemm_a16w16.py
+c962c71e52a9b35d829c29886dfde91c  aiter/tuned_gemm.py

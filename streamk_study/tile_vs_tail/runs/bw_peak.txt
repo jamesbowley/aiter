@@ -1,0 +1,7 @@
+copy_1GiB 5.232 TB/s
+read_1GiB 5.149 TB/s
+copy_2GiB 4.671 TB/s
+read_2GiB 5.441 TB/s
+copy_4GiB 4.525 TB/s
+read_4GiB 5.484 TB/s
+peak_TBps 5.484

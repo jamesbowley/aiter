@@ -1,0 +1,2 @@
+uneven: 30 shapes, new/old median 1.0207, geomean 1.0236, 5-95% 0.999-1.060, worst 0.987/1.082
+base: 15 shapes, new/old median 1.0233, geomean 1.0302, 5-95% 1.007-1.065, worst 1.003/1.077
