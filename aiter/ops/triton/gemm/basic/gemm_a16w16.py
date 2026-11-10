@@ -98,14 +98,17 @@ def _streamk_persistent_partials(device, stream, elems):
         return torch.empty(elems, dtype=torch.float32, device=device)
 
 
-def _streamk_workspace(sk, device, num_programs, num_xcds, tile, launch, persistent):
+def _streamk_workspace(
+    sk, device, num_programs, num_xcds, tile, launch, persistent, out_dtype
+):
     """``(partials, locks, sync)`` views for one launch of the Stream-K module ``sk``.
 
     ``sync`` is the reduce-scatter (count, generation) pairs followed by one
     programs-per-XCD L2 flag row per program slot (128-byte aligned rows); one
     owner lock per program follows it. Partial slots are indexed by Stream-K
     program id, which spans the whole resident grid for the L2 exchange. Partials
-    need no zeroing: every slot is written before it is read.
+    need no zeroing: every slot is written before it is read. They are fp32, or
+    ``out_dtype`` (C's 16-bit type) with 16-bit partials.
     """
     device = torch.device(device)
     if device.index is None:
@@ -114,14 +117,15 @@ def _streamk_workspace(sk, device, num_programs, num_xcds, tile, launch, persist
     sync_words = sk.sync_words(num_programs, num_xcds)
     flags = _streamk_flags(device, stream, sync_words + num_programs)
     tile_elems = tile.block_m * tile.block_n
+    dtype = out_dtype if launch["PARTIALS_16BIT"] else torch.float32
     if persistent:
         partials = _streamk_persistent_partials(
             device, stream, num_programs * sk.MAX_TILE_ELEMS
         )
-        partials = partials[: num_programs * tile_elems]
+        partials = partials.view(dtype)[: num_programs * tile_elems]
     else:
         slots = num_programs if launch["L2"] else launch["STREAMK_PROGRAMS"]
-        partials = torch.empty(slots * tile_elems, dtype=torch.float32, device=device)
+        partials = torch.empty(slots * tile_elems, dtype=dtype, device=device)
     streamk_programs = launch["STREAMK_PROGRAMS"]
     return (
         partials,
@@ -213,8 +217,17 @@ def _gemm_a16w16_gfx950_streamk(x, w, y, bias, config, persistent_partials=True)
     even_n = N % tile.block_n == 0
     even_k = K == sk.k_pad(K, tile.block_k)
     partials, locks, sync = _streamk_workspace(
-        sk, x.device, num_programs, num_xcds, tile, launch, persistent_partials
+        sk,
+        x.device,
+        num_programs,
+        num_xcds,
+        tile,
+        launch,
+        persistent_partials,
+        y.dtype,
     )
+    # 16-bit partials keep fp32's batch (and its fp32 sum registers): twice the
+    # quadrants per batch is up to 1.5x slower with 6 or 8 owner peers.
     owner_qpb = min(4, 16 // max(1, tile.block_m * tile.block_n // 4096))
     total_full_tiles = launch["TOTAL_TILES"] - launch["TAIL_TILES"]
     has_full = total_full_tiles > 0
@@ -264,6 +277,7 @@ def _gemm_a16w16_gfx950_streamk(x, w, y, bias, config, persistent_partials=True)
         TAIL_BLOCK_N=launch["TAIL_BLOCK_N"],
         TAIL_EVEN_M=not launch["TAIL_BLOCK_M"] or M % launch["TAIL_BLOCK_M"] == 0,
         TAIL_EVEN_N=not launch["TAIL_BLOCK_N"] or N % launch["TAIL_BLOCK_N"] == 0,
+        PARTIALS_16BIT=launch["PARTIALS_16BIT"],
         num_warps=sk.NUM_WARPS,
         schedule_hint=sk.schedule_hint(),
     )
