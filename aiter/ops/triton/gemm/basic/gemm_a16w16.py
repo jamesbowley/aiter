@@ -227,8 +227,10 @@ def _gemm_a16w16_gfx950_streamk(x, w, y, bias, config, persistent_partials=True)
         y.dtype,
     )
     # 16-bit partials keep fp32's batch (and its fp32 sum registers): twice the
-    # quadrants per batch is up to 1.5x slower with 6 or 8 owner peers.
-    owner_qpb = min(4, 16 // max(1, tile.block_m * tile.block_n // 4096))
+    # quadrants per batch is up to 1.5x slower with 6 or 8 owner peers. A power of
+    # two, so it divides the four quadrants of a power-of-two dp_sub sub-tile of an
+    # uneven tile (an uneven tile's owner batches its blocks itself).
+    owner_qpb = sk.pow2_floor(min(4, 16 // max(1, tile.block_m * tile.block_n // 4096)))
     total_full_tiles = launch["TOTAL_TILES"] - launch["TAIL_TILES"]
     has_full = total_full_tiles > 0
     # The persistent prologue loads program_id's first tile unclamped.
@@ -278,6 +280,10 @@ def _gemm_a16w16_gfx950_streamk(x, w, y, bias, config, persistent_partials=True)
         TAIL_EVEN_M=not launch["TAIL_BLOCK_M"] or M % launch["TAIL_BLOCK_M"] == 0,
         TAIL_EVEN_N=not launch["TAIL_BLOCK_N"] or N % launch["TAIL_BLOCK_N"] == 0,
         PARTIALS_16BIT=launch["PARTIALS_16BIT"],
+        TOP_M=launch["TOP_M"],
+        LEFT_N=launch["LEFT_N"],
+        TAIL_TOP_M=launch["TAIL_TOP_M"],
+        TAIL_LEFT_N=launch["TAIL_LEFT_N"],
         num_warps=sk.NUM_WARPS,
         schedule_hint=sk.schedule_hint(),
     )
